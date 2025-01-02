@@ -71,6 +71,7 @@
         "variant": "cpp",
         "list": "cpp",
         "cassert": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "barrier": "cpp"
     }
 }

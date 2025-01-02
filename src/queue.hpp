@@ -76,13 +76,12 @@ class Queue : public sc_module {
  private:
     int _maxsize;
 
-    std::mutex _getters;
-    std::mutex _putters;
-
-    int _getters_ns = 0;
-    int _putters_ns = 0;
+    sc_event _putters_event;
+    sc_event _getters_event;
 
     std::deque<T> _queue;
+    std::deque<T> _putters;
+    std::deque<T> _getters;
 
  public:
     void _at_all(void);
@@ -91,7 +90,7 @@ class Queue : public sc_module {
 
     T _get(void);
 
-    void _wakeup_next(std::mutex* waiters, int* ns);
+    void _wakeup_next(std::deque<T> waiters, sc_event* waiters_event);
 
     int qsize(void);
 
@@ -103,14 +102,20 @@ class Queue : public sc_module {
 
     void put(T const& item);
 
+    void _put_process(void);
+
     void put_nowait(T const& item);
 
     T get(void);
+
+    void _get_process(void);
 
     T get_nowait(void);
 
     SC_CTOR(Queue, int maxsize) {
         _maxsize = maxsize;
+        SC_THREAD(_put_process);
+        SC_THREAD(_get_process);
     }
 
     ~Queue() {

@@ -12,7 +12,7 @@ COPY --from=systemc:build ${SYSTEMC_HOME}/ ${SYSTEMC_HOME}/
 COPY --from=cci:build ${CCI_HOME}/ ${CCI_HOME}/
 COPY --from=verilator:build ${VERILATOR_ROOT}/ ${VERILATOR_ROOT}/
 RUN dnf -y install clang \
-    && dnf -y install git perl python3 make autoconf flex bison \
+    && dnf -y install git perl python3 make cmake autoconf flex bison \
     && dnf -y install epel-release \
     && dnf -y install ccache \
     && dnf -y --enablerepo=crb install help2man \

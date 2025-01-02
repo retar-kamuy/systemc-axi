@@ -12,8 +12,8 @@ BUILD			 = ./build
 OBJ_DIR			 = $(BUILD)/objects
 APP_DIR			 = $(BUILD)/apps
 TARGET			 = program
-INCLUDE			 = -Isrc/include -I$(SYSTEMC_HOME)/include
-SRC				 = $(wildcard src/*.cpp)
+INCLUDE			 = -I./src -I$(SYSTEMC_HOME)/include
+SRC				 = $(wildcard src/*.cpp test/*.cpp)
 
 OBJECTS			 = $(SRC:%.cpp=$(OBJ_DIR)/%.o)
 DEPENDENCIES	 = $(OBJECTS:.o=.d)

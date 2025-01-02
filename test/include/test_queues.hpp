@@ -5,7 +5,32 @@
 #include <string>
 #include <cassert>
 #include <vector>
-#include <queue.hpp>
+#include "queue.hpp"
+
+std::vector<int> range(int stop) {
+    std::vector<int> vec;
+
+    for (int i = 0; i < stop; i++) {
+        vec.push_back(i);
+    }
+    return vec;
+}
+
+void assert_array_equal(std::vector<int> actual, std::vector<int> desired) {
+    int* results;
+    int mismatched = 0;
+
+    results = new int[desired.size()];
+    for (int i = 0; i < desired.size(); i++) {
+        if (actual[i] == desired[i]) {
+            results[i] = 0;
+        } else {
+            results[i] = 1;
+            mismatched++;
+        }
+    }
+    std::cout << "Mismatched elements:" << mismatched << " / " << desired.size() << std::endl;
+}
 
 class TB : public sc_module {
  private:
@@ -42,8 +67,6 @@ class TB : public sc_module {
 
         // SC_THREAD(run_queue_nonblocking_test);
         SC_THREAD(test_queue_contention);
-        SC_THREAD(thread_putter);
-        SC_THREAD(thread_getter);
     }
 
     ~TB() {

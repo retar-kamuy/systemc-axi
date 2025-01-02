@@ -6,3 +6,8 @@
 make all
 ./build/apps/program
 ```
+
+```sh
+cmake -S . -B build
+cmake --build build
+```

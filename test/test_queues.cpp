@@ -52,9 +52,9 @@ void TB::run_queue_nonblocking_test(void) {
 }
 
 void TB::putter(std::vector<int>* lst, int item) {
-    std::lock_guard<std::mutex> lock(_putters);
     q->put(item);
     lst->push_back(item);
+    wait(SC_ZERO_TIME);
 }
 
 void TB::getter(std::vector<int>* lst, int item) {
@@ -68,6 +68,7 @@ void TB::getter(std::vector<int>* lst, int item) {
         std::cout << x << " ";
     });
     std::cout << "}" << std::endl;
+    wait(SC_ZERO_TIME);
 }
 
 void TB::test_queue_contention(void) {
@@ -77,13 +78,50 @@ void TB::test_queue_contention(void) {
     std::vector<int> getter_list;
 
     // test put contention
+    wait(SC_ZERO_TIME);
     for (int k = 0; k < NUM_PUTTERS; k++) {
-        coro_list.push_back(std::thread([&]{ putter(&putter_list, k); }));
+        putter(&putter_list, k);
     }
 
     q->_at_all();
     assert(q->qsize() == QUEUE_SIZE);
 
+    // test killed putter
+    // coro = cocotb.start_soon(putter(putter_list, 100))
+    // coro.kill()
+    putter(&putter_list, 101);
+
+    for (int k = 0; k < NUM_PUTTERS; k++) {
+        std::cout << sc_time_stamp() << " k=" << k << std::endl;
+        getter(&getter_list, k);
+    }
+
+    getter(&getter_list, 101);
+
+    std::stringstream ss;
+    for (auto it = putter_list.begin(); it != putter_list.end(); it++) {
+        if (it != putter_list.begin()) {
+            ss << " ";
+        }
+        ss << *it;
+    }
+    char char_array[256];
+    ss.get(char_array, 256);
+
+    std::cout << __FILE__ << "(" << __FUNCTION__ << "): " << ss.str().length() << std::endl;
+    int result = memcmp(char_array, char_array, sizeof(char_array));
+    std::cout << __FILE__ << "(" << __FUNCTION__ << "): result=" << result << std::endl;
+
+    std::vector<int> list = range(NUM_PUTTERS);
+    list.push_back(101);
+
+    assert_array_equal(putter_list, list);
+    assert_array_equal(getter_list, list);
+
+    std::cout << q->qsize() << std::endl;
+    assert(q->qsize() == 0);
+
+    /*
     // test killed putter
     std::cout << "putter_list.size()=" << putter_list.size() << std::endl;
     std::thread coro([&]{ putter(&putter_list, 100); });
@@ -116,6 +154,7 @@ void TB::test_queue_contention(void) {
     for (std::thread& th : coro_list) {
         th.join();
     }
+    */
 
     /*
     for (int k = 0; k < NUM_PUTTERS; k++) {
@@ -141,22 +180,22 @@ void TB::thread_putter(void) {
     std::cout << __FILE__ << "(" << __FUNCTION__ << "): --- thread: thread_putter start ---" << std::endl;
     std::vector<int> putter_list;
 
-    // while (true) {
+    while (true) {
         std::cout << __FILE__ << "(" << __FUNCTION__ << "): --- thread: thread_putter while(true) ---" << std::endl;
-        // wait(event_start_putter);
+        wait(event_start_putter);
 
         std::cout << sc_time_stamp() << " : thread_putter" << std::endl;
         for (int k = 0; k < NUM_PUTTERS; k++) {
             putter(&putter_list, k);
-            // wait(SC_ZERO_TIME);
+            wait(SC_ZERO_TIME);
         }
 
         // q->_at_all();
         // assert(q->qsize() == QUEUE_SIZE);
 
         event_end_putter.notify();
-        // wait(SC_ZERO_TIME);
-    // }
+        wait(SC_ZERO_TIME);
+    }
 }
 
 void TB::thread_getter(void) {
@@ -175,4 +214,19 @@ void TB::thread_getter(void) {
 
         event_end_getter.notify();
     }
+}
+
+int sc_main(int argc, char** argv) {
+    sc_clock clk("clk", 10, SC_NS, 0.5, 0, SC_NS, true);
+    sc_signal<bool> rst;
+
+    TB top("top");
+
+    top.clk(clk);
+
+    // top.cycle_reset();
+    sc_start(100, SC_NS);
+    sc_start(100, SC_NS);
+
+    return 0;
 }
