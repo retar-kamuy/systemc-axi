@@ -6,7 +6,7 @@ CXX				 = clang++
 SYSTEMC_HOME	 = $(shell echo $$SYSTEMC_HOME)
 
 # CXXFLAGS		 = -pedantic-errors -Wall -Wextra -Werror
-CXXFLAGS		 = -std=c++17 -pthread
+CXXFLAGS		 = -g -std=c++17 -pthread
 LDFLAGS			 = -L$(SYSTEMC_HOME)/lib-linux64 -lsystemc -lm -pthread
 BUILD			 = ./build
 OBJ_DIR			 = $(BUILD)/objects

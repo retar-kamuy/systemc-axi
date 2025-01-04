@@ -73,5 +73,12 @@
         "cassert": "cpp",
         "future": "cpp",
         "barrier": "cpp"
-    }
+    },
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/root/systemc-axi/build/apps",
+            "binaryPath": "/root/systemc-axi/build/apps/program",
+            "binaryArgs": []
+        }
+    ]
 }

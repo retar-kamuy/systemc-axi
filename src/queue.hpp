@@ -108,14 +108,11 @@ class Queue : public sc_module {
 
     T get(void);
 
-    void _get_process(void);
-
     T get_nowait(void);
 
     SC_CTOR(Queue, int maxsize) {
         _maxsize = maxsize;
         SC_THREAD(_put_process);
-        SC_THREAD(_get_process);
     }
 
     ~Queue() {
