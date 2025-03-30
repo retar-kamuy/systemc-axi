@@ -1,13 +1,7 @@
-# AXI interface modules for SystemC
-
-## Usage
-
-```sh
-make all
-./build/apps/program
-```
+# TLM-2.0 Example 6
 
 ```sh
 cmake -S . -B build
 cmake --build build
+./build/main
 ```
