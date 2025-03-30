@@ -41,11 +41,12 @@ class TB : public sc_module {
     sc_in<bool> clk;
     // sc_out<bool> rst;
 
-    sc_event event_start_putter;
+    sc_event_queue event_start_putter;
     sc_event event_end_putter;
-    sc_event event_start_getter;
+    sc_event_queue event_start_getter;
     sc_event event_end_getter;
 
+    std::vector<int> putter_list;
     std::vector<int> getter_list;
     std::deque<int> _getter_queue;
     std::deque<int> _putter_queue;
@@ -60,8 +61,9 @@ class TB : public sc_module {
 
     void run_queue_nonblocking_test(void);
     void test_queue_contention(void);
-    void putter_process(void);
-    void getter_process(void);
+    void test_fair_scheduling(void);
+    void _putter_process(void);
+    void _getter_process(void);
 
     SC_CTOR(TB) {
         SC_REPORT_INFO(name, "test_queues");
@@ -69,7 +71,8 @@ class TB : public sc_module {
 
         // SC_THREAD(run_queue_nonblocking_test);
         SC_THREAD(test_queue_contention);
-        SC_THREAD(getter_process);
+        SC_THREAD(_putter_process);
+        SC_THREAD(_getter_process);
     }
 
     ~TB() {

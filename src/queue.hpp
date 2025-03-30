@@ -9,44 +9,9 @@
 #include <exception>
 #include <future>
 
-// class QueueInitiator : public tlm::tlm_bw_transport_if<> {
-//  public:
-//     InitiatorSocket(const sc_module_name& name, Queue* queue) {}
-//  private:
-//     tlm::tlm_sync_enum nb_transport_bw(tlm::tlm_generic_payload& trans, tlm::tlm_phase& phase, sc_time& time) {
-//         return tlm::TLM_COMPLETED;
-//     }
-//     void invalidate_direct_mem_ptr(sc_dt::unit64 start, sc_dt::uint64 end) {
-//         return 0;
-//     }
-//
-//     Queue parent;
-// }
-
-// class QueueTarget : public tlm::tlm_fw_transportif<> {
-//  public:
-//     TargetSocket(const sc_module_name& name, Queue* queue):
-//     parent(queue) {}
-//  private:
-//     void b_transport(tlm::tlm_generic_payload& trans, sc_time& time);
-//     unsigned int transport_dbg(tlm::tlm_generic_payload& trans) {
-//         return 0;
-//     }
-//     tlm::tlm_tlm_sync_enum nb_transport_fw(tlm::tlm_generic_payload& trans, tlm::tlm_phase& phase, sc_time& time) {
-//         return tlm::TLM_COMPLETED;
-//     }
-//     bool get_direct_mon_ptr(tlm::tlm_generic_payload& trans, tlm::tlm_dmi& dmi) {
-//         return 0;
-//     }
-//
-//     enum { SIZE = 256 };
-//
-//     Queue *parent;
-// };
-
 class QueueFull : public std::exception {
     /**
-     * Raised when the Queue.put_nowait() method is called on a full Queue.
+     * @brief Raised when the Queue.put_nowait() method is called on a full Queue.
      */
  public:
     const char* what() const throw() {
@@ -56,7 +21,7 @@ class QueueFull : public std::exception {
 
 class QueueEmpty : public std::exception {
     /**
-     * Raised when the Queue.get_nowait() method is called on a empty Queue.
+     * @brief Raised when the Queue.get_nowait() method is called on a empty Queue.
      */
  public:
     const char* what() const throw() {
@@ -67,13 +32,14 @@ class QueueEmpty : public std::exception {
 template <typename T>
 class Queue : public sc_module {
     /**
-     * A queue, useful for coordinating producer and consumer coroutines.
+     * @brief A queue, useful for coordinating producer and consumer coroutines.
      * 
      * If *maxsize* is less than or equal to 0, the queue size is infinite. If it
      * is an integer greater than 0, then :meth:`put` will block when the queue
      * reaches *maxsize*, until an item is removed by :meth:`get`.
      */
  private:
+     const char* name = "Queue";
     int _maxsize;
 
     sc_event _putters_event;
@@ -111,6 +77,7 @@ class Queue : public sc_module {
     T get_nowait(void);
 
     SC_CTOR(Queue, int maxsize) {
+        SC_REPORT_INFO(name, "queue");
         _maxsize = maxsize;
         SC_THREAD(_put_process);
     }

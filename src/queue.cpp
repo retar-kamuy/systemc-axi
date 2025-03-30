@@ -28,7 +28,7 @@ T Queue<T>::_get(void) {
 template <typename T>
 void Queue<T>::_wakeup_next(std::deque<T> waiters, sc_event* waiters_event) {
     if (!waiters.empty()) {
-        waiters_event->notify();
+        waiters_event->notify(SC_ZERO_TIME);
     }
 }
 
@@ -37,7 +37,7 @@ template void Queue<int>::_wakeup_next(std::deque<int> waiters, sc_event* waiter
 template <typename T>
 int Queue<T>::qsize(void) {
     /**
-     * Number of items in the queue.
+     * @brief Number of items in the queue.
      */
     return _queue.size();
 }
@@ -47,7 +47,7 @@ template int Queue<int>::qsize(void);
 template <typename T>
 int Queue<T>::maxsize(void) {
     /**
-     * Number of items allowed in the queue.
+     * @brief Number of items allowed in the queue.
      */
     return _maxsize;
 }
@@ -57,7 +57,7 @@ template int Queue<int>::maxsize(void);
 template <typename T>
 bool Queue<T>::empty(void) {
     /**
-     * Return ``True`` if the queue is empty, ``False`` otherwise.
+     * @brief Return ``True`` if the queue is empty, ``False`` otherwise.
      */
     return _queue.empty();
 }
@@ -67,7 +67,7 @@ template bool Queue<int>::empty(void);
 template <typename T>
 bool Queue<T>::full(void) {
     /**
-     * Return ``True`` if there are :meth:`maxsize` items in the queue.
+     * @brief Return ``True`` if there are :meth:`maxsize` items in the queue.
      * 
      * .. note::
      *     If the Queue was initialized with ``maxsize=0`` (the default), then
@@ -85,7 +85,7 @@ template bool Queue<int>::full(void);
 template <typename T>
 void Queue<T>::put(T const& item) {
     /**
-     * Put an *item* into the queue.
+     * @brief Put an *item* into the queue.
      * 
      * If the queue is full, wait until a free
      * slot is available before adding the item.
@@ -99,7 +99,7 @@ template <typename T>
 void Queue<T>::_put_process(void) {
     std::cout << __FILE__ << "(" << __FUNCTION__ << "): --- thread: _put_process start ---" << std::endl;
     while (true) {
-        std::cout << __FILE__ << "(" << __FUNCTION__ << "): Before { ";
+        std::cout << __FILE__ << "(" << __FUNCTION__ << "): _queue { ";
         std::for_each(_queue.begin(), _queue.end(), [](int x) {
             std::cout << x << " ";
         });
@@ -109,6 +109,12 @@ void Queue<T>::_put_process(void) {
             wait(_putters_event);
             std::cout <<  __FILE__ << "(" << __FUNCTION__ << "): put" << std::endl;
         }
+
+        std::cout << __FILE__ << "(" << __FUNCTION__ << "): _putters { ";
+        std::for_each(_putters.begin(), _putters.end(), [](int x) {
+            std::cout << x << " ";
+        });
+        std::cout << "}" << std::endl;
 
         if (!_putters.empty()) {
             T item = _putters.front();
@@ -124,7 +130,7 @@ template void Queue<int>::_put_process(void);
 template <typename T>
 void Queue<T>::put_nowait(T const& item) {
     /**
-     * Put an *item* into the queue without blocking.
+     * @brief Put an *item* into the queue without blocking.
      * 
      * If no free slot is immediately available, raise :exc:`asyncio.QueueFull`.
      */
@@ -136,7 +142,13 @@ void Queue<T>::put_nowait(T const& item) {
         std::cout << __FILE__ << "(" << __FUNCTION__ << "): " << e.what() << std::endl;
     }
     _put(item);
-    _wakeup_next(_getters, &_getters_event);
+    std::cout << __FILE__ << "(" << __FUNCTION__ << "): _getters { ";
+    std::for_each(_getters.begin(), _getters.end(), [](int x) {
+        std::cout << x << " ";
+    });
+    std::cout << "}" << std::endl;
+    // _wakeup_next(_getters, &_getters_event);
+    _getters_event.notify(SC_ZERO_TIME);
 }
 
 template void Queue<int>::put_nowait(int const& item);
@@ -144,14 +156,21 @@ template void Queue<int>::put_nowait(int const& item);
 template <typename T>
 T Queue<T>::get(void) {
     /**
-     * Remove and return an item from the queue.
+     * @brief Remove and return an item from the queue.
      * 
      * If the queue is empty, wait until an item is available.
      */
     if (empty()) {
-        std::cout << __FILE__ << "(" << __FUNCTION__ << "): get" << std::endl;
+        std::cout << __FILE__ << "(" << __FUNCTION__ << "): get wait" << std::endl;
         wait(_getters_event);
+        std::cout << __FILE__ << "(" << __FUNCTION__ << "): get" << std::endl;
     }
+
+    std::cout << __FILE__ << "(" << __FUNCTION__ << "): _queue { ";
+    std::for_each(_queue.begin(), _queue.end(), [](int x) {
+        std::cout << x << " ";
+    });
+    std::cout << "}" << std::endl;
 
     return get_nowait();
 }
@@ -161,7 +180,7 @@ template int Queue<int>::get(void);
 template <typename T>
 T Queue<T>::get_nowait(void) {
     /**
-     * Remove and return an item from the queue.
+     * @brief Remove and return an item from the queue.
      * 
      * Return an item if one is immediately available, else raise
      * :exc:`asyncio.QueueEmpty`.
@@ -174,6 +193,11 @@ T Queue<T>::get_nowait(void) {
         std::cout << __FILE__ << "(" << __FUNCTION__ << "): " << e.what() << std::endl;
     }
     T item = _get();
+    std::cout << __FILE__ << "(" << __FUNCTION__ << "): _putters { ";
+    std::for_each(_putters.begin(), _putters.end(), [](int x) {
+        std::cout << x << " ";
+    });
+    std::cout << "}" << std::endl;
     _wakeup_next(_putters, &_putters_event);
     return item;
 }

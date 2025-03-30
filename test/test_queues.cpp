@@ -54,19 +54,31 @@ void TB::run_queue_nonblocking_test(void) {
 void TB::putter(std::vector<int>* lst, int item) {
     q->put(item);
     lst->push_back(item);
-    wait(SC_ZERO_TIME);
+}
+
+void TB::_putter_process(void) {
+    std::cout << __FILE__ << "(" << __FUNCTION__ << "): --- thread: _putter_process start ---" << std::endl;
+
+    while (true) {
+        if (!_putter_queue.empty()) {
+            int item = _putter_queue.front();
+            _putter_queue.pop_front();
+            putter(&putter_list, item);
+        }
+        wait(SC_ZERO_TIME);
+    }
 }
 
 void TB::getter(std::vector<int>* lst, int item) {
-    int temp = q->get();
-    std::cout << "temp=" << temp << ", " << "item=" << item << std::endl;
-    assert(item == temp);
+    int result = q->get();
+
+    std::cout << "result=" << result << ", item=" << item << std::endl;
+    assert(item == result);
     lst->push_back(item);
-    wait(SC_ZERO_TIME);
 }
 
-void TB::getter_process(void) {
-    std::cout << __FILE__ << "(" << __FUNCTION__ << "): --- thread: thread_getter start ---" << std::endl;
+void TB::_getter_process(void) {
+    std::cout << __FILE__ << "(" << __FUNCTION__ << "): --- thread: _getter_process start ---" << std::endl;
 
     while (true) {
         if (!_getter_queue.empty()) {
@@ -79,32 +91,43 @@ void TB::getter_process(void) {
 }
 
 void TB::test_queue_contention(void) {
+    wait(SC_ZERO_TIME);
     std::cout << __FILE__ << "(" << __FUNCTION__ << "): --- thread: test_queue_contention start ---" << std::endl;
-    std::vector<int> putter_list;
 
     // test put contention
-    wait(SC_ZERO_TIME);
     for (int k = 0; k < NUM_PUTTERS; k++) {
-        putter(&putter_list, k);
+        _putter_queue.push_back(k);
     }
 
-    q->_at_all();
+    std::cout << __FILE__ << "(" << __FUNCTION__ << "): _putter_queue { ";
+    std::for_each(_putter_queue.begin(), _putter_queue.end(), [](int x) {
+        std::cout << x << " ";
+    });
+    std::cout << "}" << std::endl;
+
+    std::cout << "_putter_queue.size()=" << _putter_queue.size() << std::endl;
+    while (_putter_queue.size() != 0) {
+        wait(SC_ZERO_TIME);
+    }
+
+    std::cout << "_putter_queue.size()=" << _putter_queue.size() << std::endl;
+    std::cout << q->qsize() << std::endl;
     assert(q->qsize() == QUEUE_SIZE);
 
     // test killed putter
-    // coro = cocotb.start_soon(putter(putter_list, 100))
-    // coro.kill()
-    putter(&putter_list, 101);
+    _putter_queue.push_back(100);
+    _putter_queue.pop_back();
+    _putter_queue.push_back(101);
 
     for (int k = 0; k < NUM_PUTTERS; k++) {
-        // getter(&getter_list, k);
         _getter_queue.push_back(k);
     }
 
-    // getter(&getter_list, 101);
     _getter_queue.push_back(101);
 
-    while (_getter_queue.size() != 0) {
+    while (_putter_queue.size() != 0 || _getter_queue.size() != 0) {
+        std::cout << "_putter_queue.size()=" << _putter_queue.size() << std::endl;
+        std::cout << "_getter_queue.size()=" << _getter_queue.size() << std::endl;
         wait(SC_ZERO_TIME);
     }
 
@@ -114,9 +137,9 @@ void TB::test_queue_contention(void) {
     assert_array_equal(putter_list, list);
     assert_array_equal(getter_list, list);
 
-    std::cout << q->qsize() << std::endl;
     assert(q->qsize() == 0);
 
+    _putter_queue.clear();
     _getter_queue.clear();
     putter_list.clear();
     getter_list.clear();
@@ -124,50 +147,38 @@ void TB::test_queue_contention(void) {
     // test get contension
     for (int k = 0; k < NUM_PUTTERS; k++) {
         _getter_queue.push_back(k);
-        wait(SC_ZERO_TIME);
     }
 
     // test killed getter
-    // coro = cocotb.start_soon(getter(getter_list, 100))
-    // coro.kill()
+    _getter_queue.push_back(100);
+    _getter_queue.pop_back();
     _getter_queue.push_back(101);
 
     for (int k = 0; k < NUM_PUTTERS; k++) {
-        putter(&putter_list, k);
+        _putter_queue.push_back(k);
     }
 
-    putter(&putter_list, 101);
+    _putter_queue.push_back(101);
 
-    while (_getter_queue.size() != 0) { // BUG
+    while (_putter_queue.size() != 0 || _getter_queue.size() != 0) {
+        std::cout << "_putter_queue.size()=" << _putter_queue.size() << std::endl;
+        std::cout << "_getter_queue.size()=" << _getter_queue.size() << std::endl;
         wait(SC_ZERO_TIME);
     }
 
     assert_array_equal(putter_list, list);
     assert_array_equal(getter_list, list);
 
-    std::cout << q->qsize() << std::endl;
     assert(q->qsize() == 0);
 }
 
-void TB::putter_process(void) {
-    std::cout << __FILE__ << "(" << __FUNCTION__ << "): --- thread: thread_putter start ---" << std::endl;
-    std::vector<int> putter_list;
+void TB::test_fair_scheduling(void) {
+    wait(SC_ZERO_TIME);
+    std::cout << __FILE__ << "(" << __FUNCTION__ << "): --- thread: test_fair_scheduling start ---" << std::endl;
 
-    while (true) {
-        std::cout << __FILE__ << "(" << __FUNCTION__ << "): --- thread: thread_putter while(true) ---" << std::endl;
-        wait(event_start_putter);
-
-        std::cout << sc_time_stamp() << " : thread_putter" << std::endl;
-        for (int k = 0; k < NUM_PUTTERS; k++) {
-            putter(&putter_list, k);
-            wait(SC_ZERO_TIME);
-        }
-
-        // q->_at_all();
-        // assert(q->qsize() == QUEUE_SIZE);
-
-        event_end_putter.notify();
-        wait(SC_ZERO_TIME);
+    // test put contention
+    for (int k = 0; k < NUM_PUTTERS; k++) {
+        _putter_queue.push_back(k);
     }
 }
 
